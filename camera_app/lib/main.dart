@@ -24,6 +24,7 @@ class _CameraScreenState extends State<CameraScreen> {
   CameraController? _controller;
   IOWebSocketChannel? _channel;
   bool _isStreaming = false;
+  bool _isProcessingFrame = false;
 
   @override
   void initState() {
@@ -60,23 +61,26 @@ class _CameraScreenState extends State<CameraScreen> {
       setState(() => _isStreaming = true);
       print("STREAM STARTED");
 
-      _controller?.startImageStream((CameraImage image) {
-        // ONLY send if the channel is actually open
-        if (_channel != null && _isStreaming) {
-          try {
-            // Grab the bytes
-            final bytes = image.planes[0].bytes;
+      _controller?.startImageStream((CameraImage image) async {
+        // 1. If we are already busy sending a frame, skip this one!
+        if (_isProcessingFrame) return;
 
-            // SEND DATA
-            _channel!.sink.add(bytes);
+        // 2. Close the gate
+        _isProcessingFrame = true;
 
-            // Add this print so you can SEE it working in VS Code
-            // If you see this but nothing on Koyeb, the URL is the problem.
-            print("Sent frame: ${bytes.length} bytes");
-          } catch (e) {
-            print("Error sending: $e");
-          }
+        try {
+          final bytes = image.planes[0].bytes;
+          _channel?.sink.add(bytes);
+          print("Sent frame: ${bytes.length} bytes");
+        } catch (e) {
+          print("Error: $e");
         }
+
+        // 3. Wait a tiny bit (100ms) so the network stays stable
+        await Future.delayed(Duration(milliseconds: 100));
+
+        // 4. Open the gate for the next frame
+        _isProcessingFrame = false;
       });
     }
   }
