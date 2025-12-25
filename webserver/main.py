@@ -1,8 +1,16 @@
 from fastapi import FastAPI, WebSocket
-import uvicorn
-import os
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
+
+# Add this to allow your phone to talk to the server
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/")
 def home():
@@ -11,14 +19,10 @@ def home():
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
-    print("CONNECTION SUCCESSFUL")
+    print("PHONE CONNECTED!")
     try:
         while True:
             data = await websocket.receive_bytes()
-            print(f"Received {len(data)} bytes")
+            # This is where your image data arrives
     except Exception as e:
         print(f"Disconnected: {e}")
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run(app, host="0.0.0.0", port=port, ws="websockets")
