@@ -31,18 +31,21 @@ async def get():
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await manager.connect(websocket)
-    print("--- Phone Connected to WebSocket ---")
+    # This will show up in Koyeb when your phone connects
+    print(f"DEBUG: Phone connected from {websocket.client.host}") 
+    
     try:
         while True:
-            # We use receive_bytes because the phone is sending camera data
+            # Receive the image bytes from Flutter
             data = await websocket.receive_bytes()
             
-            # This will print the size of the image frame in your Koyeb logs
-            print(f"Received frame: {len(data)} bytes")
+            # Print the size of every frame received
+            # (If this scrolls fast, you know the data is flowing!)
+            print(f"DEBUG: Received frame - Size: {len(data)} bytes")
             
     except WebSocketDisconnect:
         manager.disconnect(websocket)
-        print("--- Phone Disconnected ---")
+        print("DEBUG: Phone disconnected")
 
 # 3. HEALTH CHECK (Required for Koyeb to keep the app running)
 @app.get("/healthz")
